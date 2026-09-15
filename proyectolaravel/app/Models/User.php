@@ -23,12 +23,12 @@ class User extends Authenticatable
     }
 
     public function createdTickets(): HasMany
-{
-    return $this->hasMany(Ticket::class, 'customer_id');
-}
+    {
+        return $this->hasMany(Ticket::class, 'customer_id');
+    }
 
-public function assignedTickets(): HasMany
-{
-    return $this->hasMany(Ticket::class, 'agent_id');
-}
+    public function assignedTickets(): HasMany
+    {
+        return $this->hasMany(Ticket::class, 'agent_id');
+    }
 }
