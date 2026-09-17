@@ -7,22 +7,42 @@ use App\Http\Requests\StoreTicketRequest;
 use App\Http\Requests\UpdateTicketRequest;
 use App\Http\Resources\TicketResource;
 use App\Models\Ticket;
+use Illuminate\Http\Request;
 
 class TicketController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $tickets = Ticket::query()
+        $this->authorize('viewAny', Ticket::class);
+
+        $query = Ticket::query()
             ->with(['customer', 'agent'])
-            ->latest()
-            ->paginate(15);
+            ->latest();
+
+        if (! $request->user()->hasRole('admin')) {
+            $userId = $request->user()->id;
+
+            $query->where(function ($query) use ($userId) {
+                $query
+                    ->where('customer_id', $userId)
+                    ->orWhere('agent_id', $userId);
+            });
+        }
+
+        $tickets = $query->paginate(15);
 
         return TicketResource::collection($tickets);
     }
 
     public function store(StoreTicketRequest $request)
     {
+        $this->authorize('create', Ticket::class);
+
         $validated = $request->validated();
+
+        if (! $request->user()->hasRole('admin')) {
+            $validated['customer_id'] = $request->user()->id;
+        }
 
         $ticket = Ticket::create([
             ...$validated,
@@ -37,6 +57,8 @@ class TicketController extends Controller
 
     public function show(Ticket $ticket)
     {
+        $this->authorize('view', $ticket);
+
         return new TicketResource(
             $ticket->load(['customer', 'agent'])
         );
@@ -46,6 +68,8 @@ class TicketController extends Controller
         UpdateTicketRequest $request,
         Ticket $ticket
     ) {
+        $this->authorize('update', $ticket);
+
         $validated = $request->validated();
 
         if (array_key_exists('status', $validated)) {
@@ -80,6 +104,8 @@ class TicketController extends Controller
 
     public function destroy(Ticket $ticket)
     {
+        $this->authorize('delete', $ticket);
+
         $ticket->delete();
 
         return response()->noContent();
