@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\TicketStatus;
 use App\Models\Ticket;
 use App\Models\User;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -118,12 +119,16 @@ class TicketApiTest extends TestCase
 
     private function authenticate(): User
     {
+        $this->seed(RolePermissionSeeder::class);
+
         $user = User::factory()->create();
+        $user->assignRole('admin');
 
         Sanctum::actingAs($user, [
             'tickets.read',
             'tickets.create',
             'tickets.update',
+            'tickets.delete',
         ]);
 
         return $user;
