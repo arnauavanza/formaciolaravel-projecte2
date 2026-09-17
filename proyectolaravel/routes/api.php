@@ -1,10 +1,12 @@
 <?php
 
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AuthorController;
 use App\Http\Controllers\BookController;
 use App\Http\Controllers\GenreController;
 use App\Http\Controllers\LoanController;
 use App\Http\Controllers\MemberController;
+use App\Http\Controllers\TicketController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', function () {
@@ -31,3 +33,17 @@ Route::delete('loans/{loan}', [LoanController::class, 'destroy'])
 Route::post('loans/{loan}/return', [LoanController::class, 'returnLoan'])
     ->name('loans.return');
 Route::apiResource('members', MemberController::class);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('auth/me', [AuthController::class, 'me'])
+        ->name('auth.me');
+
+    Route::post('auth/logout', [AuthController::class, 'logout'])
+        ->name('auth.logout');
+
+    Route::apiResource('tickets', TicketController::class);
+});
+Route::post('auth/register', [AuthController::class, 'register'])
+    ->name('auth.register');
+
+Route::post('auth/login', [AuthController::class, 'login'])
+    ->name('auth.login');
