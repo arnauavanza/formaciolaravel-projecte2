@@ -3,33 +3,34 @@
 namespace App\Http\Controllers;
 
 use App\Enums\TicketStatus;
+use App\Http\Requests\AssignTicketRequest;
 use App\Http\Requests\StoreTicketRequest;
 use App\Http\Requests\UpdateTicketRequest;
 use App\Http\Resources\TicketResource;
 use App\Models\Ticket;
+use App\Models\User;
+use App\Repositories\Contracts\TicketRepositoryInterface;
+use App\Services\AssignTicketService;
+use App\Services\CloseTicketService;
+use App\Services\UpdateTicketService;
+use DomainException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class TicketController extends Controller
 {
+    public function __construct(
+        private TicketRepositoryInterface $tickets
+    ) {}
+
     public function index(Request $request)
     {
         $this->authorize('viewAny', Ticket::class);
 
-        $query = Ticket::query()
-            ->with(['customer', 'agent'])
-            ->latest();
-
-        if (! $request->user()->hasRole('admin')) {
-            $userId = $request->user()->id;
-
-            $query->where(function ($query) use ($userId) {
-                $query
-                    ->where('customer_id', $userId)
-                    ->orWhere('agent_id', $userId);
-            });
-        }
-
-        $tickets = $query->paginate(15);
+        $tickets = $this->tickets->paginateVisibleTo(
+            $request->user(),
+            Gate::allows('viewAll', Ticket::class),
+        );
 
         return TicketResource::collection($tickets);
     }
@@ -40,11 +41,11 @@ class TicketController extends Controller
 
         $validated = $request->validated();
 
-        if (! $request->user()->hasRole('admin')) {
+        if (! Gate::allows('createForAnotherUser', Ticket::class)) {
             $validated['customer_id'] = $request->user()->id;
         }
 
-        $ticket = Ticket::create([
+        $ticket = $this->tickets->create([
             ...$validated,
             'status' => TicketStatus::Open,
             'last_activity_at' => now(),
@@ -64,66 +65,72 @@ class TicketController extends Controller
         );
     }
 
+    public function assign(
+        AssignTicketRequest $request,
+        Ticket $ticket,
+        AssignTicketService $service
+    ) {
+        $this->authorize('assign', $ticket);
+
+        $agent = User::query()->findOrFail(
+            $request->validated('agent_id')
+        );
+
+        try {
+            $ticket = $service->execute($ticket, $agent);
+        } catch (DomainException $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
+
+        return new TicketResource($ticket);
+    }
+
+    public function close(
+        Ticket $ticket,
+        CloseTicketService $service
+    ) {
+        $this->authorize('close', $ticket);
+
+        try {
+            $ticket = $service->execute($ticket);
+        } catch (DomainException $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
+
+        return new TicketResource($ticket);
+    }
+
     public function update(
         UpdateTicketRequest $request,
-        Ticket $ticket
+        Ticket $ticket,
+        UpdateTicketService $service
     ) {
         $this->authorize('update', $ticket);
 
-        $validated = $request->validated();
-
-        if (array_key_exists('status', $validated)) {
-            $nextStatus = TicketStatus::from($validated['status']);
-
-            if (! $this->canTransition($ticket->status, $nextStatus)) {
-                return response()->json([
-                    'message' => 'Invalid ticket status transition.',
-                ], 422);
-            }
-
-            $validated['status'] = $nextStatus;
-
-            if ($nextStatus === TicketStatus::Resolved) {
-                $validated['resolved_at'] = now();
-            }
-
-            if ($nextStatus === TicketStatus::Closed) {
-                $validated['resolved_at'] ??= now();
-                $validated['closed_at'] = now();
-            }
+        try {
+            $ticket = $service->execute(
+                $ticket,
+                $request->validated()
+            );
+        } catch (DomainException $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], 422);
         }
 
-        $validated['last_activity_at'] = now();
-
-        $ticket->update($validated);
-
-        return new TicketResource(
-            $ticket->fresh(['customer', 'agent'])
-        );
+        return new TicketResource($ticket);
     }
 
     public function destroy(Ticket $ticket)
     {
         $this->authorize('delete', $ticket);
 
-        $ticket->delete();
+        $this->tickets->delete($ticket);
 
         return response()->noContent();
-    }
-
-    private function canTransition(
-        TicketStatus $currentStatus,
-        TicketStatus $nextStatus
-    ): bool {
-        if ($currentStatus === $nextStatus) {
-            return true;
-        }
-
-        return match ($currentStatus) {
-            TicketStatus::Open => $nextStatus === TicketStatus::InProgress,
-            TicketStatus::InProgress => $nextStatus === TicketStatus::Resolved,
-            TicketStatus::Resolved => $nextStatus === TicketStatus::Closed,
-            TicketStatus::Closed => false,
-        };
     }
 }

@@ -138,6 +138,69 @@ class TicketAuthorizationTest extends TestCase
         ]);
     }
 
+    public function test_supervisor_can_view_all_tickets_but_cannot_modify_them(): void
+    {
+        $supervisor = User::factory()->create();
+        $supervisor->assignRole('supervisor');
+
+        $firstTicket = Ticket::factory()->create();
+        $secondTicket = Ticket::factory()->create();
+
+        $this->authenticate($supervisor);
+
+        $this->getJson('/api/tickets')
+            ->assertOk()
+            ->assertJsonCount(2, 'data');
+
+        $this->getJson("/api/tickets/{$firstTicket->id}")
+            ->assertOk();
+
+        $this->patchJson("/api/tickets/{$firstTicket->id}", [
+            'title' => 'Should be rejected',
+        ])
+            ->assertForbidden();
+
+        $this->deleteJson("/api/tickets/{$secondTicket->id}")
+            ->assertForbidden();
+    }
+
+    public function test_supervisor_can_assign_an_active_agent(): void
+    {
+        $supervisor = User::factory()->create();
+        $supervisor->assignRole('supervisor');
+
+        $agent = User::factory()->create();
+        $ticket = Ticket::factory()->create();
+
+        $this->authenticate($supervisor);
+
+        $this->postJson("/api/tickets/{$ticket->id}/assign", [
+            'agent_id' => $agent->id,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.agent_id', $agent->id);
+    }
+
+    public function test_only_resolved_tickets_can_be_closed(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+
+        $openTicket = Ticket::factory()->create();
+        $resolvedTicket = Ticket::factory()
+            ->resolved()
+            ->create();
+
+        $this->authenticate($admin);
+
+        $this->postJson("/api/tickets/{$openTicket->id}/close")
+            ->assertForbidden();
+
+        $this->postJson("/api/tickets/{$resolvedTicket->id}/close")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'closed');
+    }
+
     private function authenticate(User $user): void
     {
         Sanctum::actingAs($user, [
@@ -145,6 +208,8 @@ class TicketAuthorizationTest extends TestCase
             'tickets.create',
             'tickets.update',
             'tickets.delete',
+            'tickets.assign',
+            'tickets.close',
         ]);
     }
 }

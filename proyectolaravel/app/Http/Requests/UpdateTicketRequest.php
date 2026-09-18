@@ -28,12 +28,7 @@ class UpdateTicketRequest extends FormRequest
             'status' => [
                 'sometimes',
                 Rule::enum(TicketStatus::class),
-            ],
-            'agent_id' => [
-                'sometimes',
-                'nullable',
-                'integer',
-                'exists:users,id',
+                Rule::notIn([TicketStatus::Closed->value]),
             ],
         ];
     }

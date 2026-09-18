@@ -15,6 +15,13 @@ class RolePermissionSeeder extends Seeder
             'tickets.create',
             'tickets.update',
             'tickets.delete',
+            'tickets.view_all',
+            'tickets.update_all',
+            'tickets.delete_all',
+            'tickets.create_for_others',
+            'tickets.assign',
+            'tickets.close',
+            'comments.create',
         ];
 
         $permissionModels = collect($permissions)->mapWithKeys(
@@ -30,10 +37,20 @@ class RolePermissionSeeder extends Seeder
             'customer' => [
                 'tickets.read',
                 'tickets.create',
+                'comments.create',
             ],
+
             'agent' => [
                 'tickets.read',
                 'tickets.update',
+                'comments.create',
+            ],
+
+            'supervisor' => [
+                'tickets.read',
+                'tickets.view_all',
+                'tickets.assign',
+                'comments.create',
             ],
             'admin' => $permissions,
         ];
@@ -43,6 +60,7 @@ class RolePermissionSeeder extends Seeder
                 'name' => $roleName,
                 'guard_name' => 'web',
             ]);
+
             $role->syncPermissions(
                 collect($rolePermissions)
                     ->map(fn (string $permission) => $permissionModels->get($permission))

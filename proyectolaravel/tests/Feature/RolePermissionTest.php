@@ -23,15 +23,23 @@ class RolePermissionTest extends TestCase
         $this->assertTrue($customer->can('tickets.create'));
         $this->assertFalse($customer->can('tickets.update'));
         $this->assertFalse($customer->can('tickets.delete'));
+
+        $supervisor = User::factory()->create();
+        $supervisor->assignRole('supervisor');
+
+        $this->assertTrue($supervisor->hasRole('supervisor'));
+        $this->assertTrue($supervisor->can('tickets.read'));
+        $this->assertTrue($supervisor->can('tickets.view_all'));
+        $this->assertTrue($supervisor->can('tickets.assign'));
+        $this->assertFalse($supervisor->can('tickets.close'));
     }
 
     public function test_role_permission_seeder_is_idempotent(): void
     {
         $this->seed(RolePermissionSeeder::class);
         $this->seed(RolePermissionSeeder::class);
-
-        $this->assertDatabaseCount('permissions', 4);
-        $this->assertDatabaseCount('roles', 3);
-        $this->assertDatabaseCount('role_has_permissions', 8);
+        $this->assertDatabaseCount('permissions', 11);
+        $this->assertDatabaseCount('roles', 4);
+        $this->assertDatabaseCount('role_has_permissions', 21);
     }
 }
