@@ -13,9 +13,14 @@ class TicketPolicy
         return $user->can('tickets.read');
     }
 
+    public function viewAll(User $user): bool
+    {
+        return $user->can('tickets.view_all');
+    }
+
     public function view(User $user, Ticket $ticket): bool
     {
-        return $user->hasRole('admin')
+        return $user->can('tickets.view_all')
             || (
                 $user->can('tickets.read')
                 && in_array($user->id, [
@@ -30,13 +35,30 @@ class TicketPolicy
         return $user->can('tickets.create');
     }
 
+    public function createForAnotherUser(User $user): bool
+    {
+        return $user->can('tickets.create_for_others');
+    }
+
+    public function assign(User $user, Ticket $ticket): bool
+    {
+        return $ticket->status !== TicketStatus::Closed
+            && $user->can('tickets.assign');
+    }
+
+    public function close(User $user, Ticket $ticket): bool
+    {
+        return $ticket->status === TicketStatus::Resolved
+            && $user->can('tickets.close');
+    }
+
     public function update(User $user, Ticket $ticket): bool
     {
         if ($ticket->status === TicketStatus::Closed) {
             return false;
         }
 
-        return $user->hasRole('admin')
+        return $user->can('tickets.update_all')
             || (
                 $user->can('tickets.update')
                 && $ticket->agent_id === $user->id
@@ -45,7 +67,23 @@ class TicketPolicy
 
     public function delete(User $user, Ticket $ticket): bool
     {
-        return $ticket->status !== TicketStatus::Closed
-            && $user->can('tickets.delete');
+        if ($ticket->status === TicketStatus::Closed) {
+            return false;
+        }
+
+        return $user->can('tickets.delete_all')
+            || $user->can('tickets.delete');
+    }
+
+    public function comment(User $user, Ticket $ticket): bool
+    {
+        return $user->can('comments.create')
+            && (
+                $user->can('tickets.view_all')
+                || in_array($user->id, [
+                    $ticket->customer_id,
+                    $ticket->agent_id,
+                ], true)
+            );
     }
 }
