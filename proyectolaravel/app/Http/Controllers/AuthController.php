@@ -21,6 +21,8 @@ class AuthController extends Controller
             'password' => Hash::make($validated['password']),
         ]);
 
+        $user->assignRole('customer');
+
         return $this->tokenResponse($user, 201);
     }
 
@@ -46,7 +48,9 @@ class AuthController extends Controller
 
     public function me(Request $request)
     {
-        return new UserResource($request->user());
+        return new UserResource(
+            $request->user()->loadMissing(['roles.permissions', 'permissions'])
+        );
     }
 
     public function logout(Request $request)
@@ -58,12 +62,18 @@ class AuthController extends Controller
 
     private function tokenResponse(User $user, int $status = 200)
     {
+        $user->loadMissing(['roles.permissions', 'permissions']);
+
         $token = $user->createToken(
             'p2-api-token',
             [
                 'tickets.read',
                 'tickets.create',
                 'tickets.update',
+                'tickets.delete',
+                'tickets.assign',
+                'tickets.close',
+                'comments.create',
             ]
         )->plainTextToken;
 

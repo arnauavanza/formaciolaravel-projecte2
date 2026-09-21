@@ -38,6 +38,10 @@
                     </button>
                 </nav>
 
+                <a href="{{ route('support') }}" class="nav-link">
+                    Soporte
+                </a>
+
                 <div class="api-status" title="Estado de GET /api/health">
                     <span id="api-status-dot" class="status-dot is-loading"></span>
                     <span id="api-status-text">Comprobando API…</span>
