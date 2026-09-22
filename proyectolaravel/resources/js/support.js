@@ -267,16 +267,29 @@ if (supportApp) {
         renderComments();
     }
 
-    async function createTicket() {
-        const title = window.prompt('Título del ticket:');
+    function openCreateTicketModal() {
+        const modal = byId('create-ticket-modal');
+        const form = byId('create-ticket-form');
 
-        if (! title) {
-            return;
-        }
+        form.reset();
+        modal.hidden = false;
+        byId('create-ticket-title-input').focus();
+    }
 
-        const description = window.prompt('Descripción del ticket:');
+    function closeCreateTicketModal() {
+        byId('create-ticket-modal').hidden = true;
+    }
 
-        if (! description) {
+    async function createTicket(event) {
+        event.preventDefault();
+
+        const form = byId('create-ticket-form');
+        const title = form.elements.title.value.trim();
+        const description = form.elements.description.value.trim();
+
+        if (! title || ! description) {
+            showToast('Título y descripción son obligatorios.', true);
+
             return;
         }
 
@@ -289,6 +302,7 @@ if (supportApp) {
             },
         });
 
+        closeCreateTicketModal();
         await loadTickets();
         await selectTicket(payload.data.id);
         showToast('Ticket creado correctamente.');
@@ -498,7 +512,8 @@ if (supportApp) {
         byId('login-form').addEventListener('submit', withErrorHandling(login));
         byId('register-form').addEventListener('submit', withErrorHandling(register));
         byId('logout-button').addEventListener('click', withErrorHandling(logout));
-        byId('new-ticket-button').addEventListener('click', withErrorHandling(createTicket));
+        byId('new-ticket-button').addEventListener('click', openCreateTicketModal);
+        byId('create-ticket-form').addEventListener('submit', withErrorHandling(createTicket));
         byId('refresh-tickets-button').addEventListener('click', withErrorHandling(loadTickets));
         byId('ticket-form').addEventListener('submit', withErrorHandling(updateTicket));
         byId('assign-form').addEventListener('submit', withErrorHandling(assignTicket));
@@ -518,6 +533,16 @@ if (supportApp) {
                 return selectTicket(ticket.dataset.ticketId);
             }
         }));
+
+        document.querySelectorAll('[data-close-create-ticket]').forEach((el) => {
+            el.addEventListener('click', closeCreateTicketModal);
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && ! byId('create-ticket-modal').hidden) {
+                closeCreateTicketModal();
+            }
+        });
 
         document.querySelectorAll('[data-demo-email]').forEach((button) => {
             button.addEventListener('click', () => {

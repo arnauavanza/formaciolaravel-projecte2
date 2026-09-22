@@ -609,3 +609,66 @@ select:focus {
         white-space: nowrap;
     }
 }
+
+.support-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: grid;
+    place-items: center;
+    padding: 1.25rem;
+}
+
+.support-modal[hidden] {
+    display: none;
+}
+
+.support-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(23, 32, 51, 0.45);
+}
+
+.support-modal-panel {
+    position: relative;
+    z-index: 1;
+    width: min(560px, 100%);
+    max-height: min(90vh, 720px);
+    overflow: auto;
+    padding: 1.5rem;
+    border: 1px solid var(--support-line);
+    border-radius: 1.25rem;
+    background: var(--support-surface);
+    box-shadow: var(--support-shadow);
+}
+
+.support-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.support-modal-header h2 {
+    margin: 0.35rem 0 0.45rem;
+    font-size: clamp(1.4rem, 3vw, 1.9rem);
+}
+
+.support-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 0.5rem;
+}
+
+@media (max-width: 640px) {
+    .support-modal-actions {
+        flex-direction: column-reverse;
+    }
+
+    .support-modal-actions .button {
+        width: 100%;
+    }
+}

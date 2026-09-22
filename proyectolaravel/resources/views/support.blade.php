@@ -230,6 +230,71 @@
                 </div>
             </section>
         </main>
+
+        <div id="create-ticket-modal" class="support-modal" hidden>
+            <div class="support-modal-backdrop" data-close-create-ticket></div>
+            <div
+                class="support-modal-panel"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="create-ticket-title"
+            >
+                <div class="support-modal-header">
+                    <div>
+                        <p class="eyebrow">Nueva incidencia</p>
+                        <h2 id="create-ticket-title">Crear ticket</h2>
+                        <p class="support-muted">
+                            Describe el problema con el mayor detalle posible.
+                        </p>
+                    </div>
+                    <button
+                        id="close-create-ticket-button"
+                        class="icon-button"
+                        type="button"
+                        data-close-create-ticket
+                        aria-label="Cerrar"
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                <form id="create-ticket-form" class="stack-form">
+                    <label>
+                        Título
+                        <input
+                            id="create-ticket-title-input"
+                            name="title"
+                            type="text"
+                            maxlength="255"
+                            required
+                            placeholder="Ej. No puedo renovar un préstamo"
+                        >
+                    </label>
+                    <label>
+                        Descripción
+                        <textarea
+                            id="create-ticket-description-input"
+                            name="description"
+                            rows="6"
+                            required
+                            placeholder="Explica qué pasa, desde cuándo y qué has intentado."
+                        ></textarea>
+                    </label>
+                    <div class="support-modal-actions">
+                        <button
+                            class="button button-secondary"
+                            type="button"
+                            data-close-create-ticket
+                        >
+                            Cancelar
+                        </button>
+                        <button class="button button-primary" type="submit">
+                            Crear ticket
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 </body>
 </html>
