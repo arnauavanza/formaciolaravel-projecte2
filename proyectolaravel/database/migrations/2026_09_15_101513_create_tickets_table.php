@@ -34,6 +34,11 @@ return new class extends Migration
             $table->timestamp('closed_at')
                 ->nullable();
 
+            $table->index([
+                'status',
+                'last_activity_at',
+            ]);
+
             $table->timestamps();
         });
     }

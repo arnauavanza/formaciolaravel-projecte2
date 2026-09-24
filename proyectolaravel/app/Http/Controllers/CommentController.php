@@ -24,8 +24,6 @@ class CommentController extends Controller
 
     public function store(StoreCommentRequest $request, Ticket $ticket, StoreCommentService $service)
     {
-        $this->authorize('comment', $ticket);
-
         return $this->createdCommentResponse(
             $service->execute(
                 $ticket,

@@ -8,7 +8,12 @@ class StoreAttachmentRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        $user = $this->user();
+        $comment = $this->route('comment');
+
+        return $user !== null
+            && $comment !== null
+            && $user->can('comment', $comment->ticket);
     }
 
     public function rules(): array

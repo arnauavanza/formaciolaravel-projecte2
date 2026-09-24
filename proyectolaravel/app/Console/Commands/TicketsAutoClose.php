@@ -3,9 +3,9 @@
 namespace App\Console\Commands;
 
 use App\Enums\TicketStatus;
+use App\Exceptions\DomainRuleException;
 use App\Models\Ticket;
 use App\Services\CloseTicketService;
-use DomainException;
 use Illuminate\Console\Command;
 
 class TicketsAutoClose extends Command
@@ -28,41 +28,42 @@ class TicketsAutoClose extends Command
             ->where(
                 'last_activity_at',
                 '<=',
-                now()->subDays(7)
-            )
-            ->get();
+                now()->subDays(config('tickets.auto_close_days'))
+            );
 
-        if ($tickets->isEmpty()) {
+        $dryRun = $this->option('dry-run');
+        $found = 0;
+        $closed = 0;
+
+        foreach ($tickets->lazyById() as $ticket) {
+            $found++;
+
+            if ($dryRun) {
+                $this->line("Would close ticket #{$ticket->id}.");
+
+                continue;
+            }
+
+            try {
+                $this->closeTicket->execute($ticket);
+                $closed++;
+            } catch (DomainRuleException $exception) {
+                $this->error(
+                    "Ticket #{$ticket->id}: {$exception->getMessage()}"
+                );
+            }
+        }
+
+        if ($found === 0) {
             $this->info('No tickets require automatic closure.');
 
             return self::SUCCESS;
         }
 
-        if ($this->option('dry-run')) {
-            foreach ($tickets as $ticket) {
-                $this->line(
-                    "Would close ticket #{$ticket->id}."
-                );
-            }
-
-            $this->info(
-                "{$tickets->count()} ticket(s) would be closed."
-            );
+        if ($dryRun) {
+            $this->info("{$found} ticket(s) would be closed.");
 
             return self::SUCCESS;
-        }
-
-        $closed = 0;
-
-        foreach ($tickets as $ticket) {
-            try {
-                $this->closeTicket->execute($ticket);
-                $closed++;
-            } catch (DomainException $exception) {
-                $this->error(
-                    "Ticket #{$ticket->id}: {$exception->getMessage()}"
-                );
-            }
         }
 
         $this->info("Closed {$closed} ticket(s).");

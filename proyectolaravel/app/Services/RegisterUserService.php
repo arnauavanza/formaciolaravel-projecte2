@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\User;
-use Illuminate\Support\Facades\Hash;
 
 class RegisterUserService
 {
@@ -12,7 +11,7 @@ class RegisterUserService
         $user = User::create([
             'name' => $attributes['name'],
             'email' => $attributes['email'],
-            'password' => Hash::make($attributes['password']),
+            'password' => $attributes['password'],
         ]);
 
         $user->assignRole('customer');

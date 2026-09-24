@@ -8,7 +8,6 @@ use App\Repositories\Contracts\TicketRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Pagination\LengthAwarePaginator as Paginator;
-use Illuminate\Support\Facades\Gate;
 
 class FakeTicketRepository implements TicketRepositoryInterface
 {
@@ -21,11 +20,12 @@ class FakeTicketRepository implements TicketRepositoryInterface
 
     public function paginateVisibleTo(
         User $user,
+        bool $viewAll,
         int $perPage = 15
     ): LengthAwarePaginator {
         $tickets = collect($this->tickets);
 
-        if (! Gate::forUser($user)->allows('viewAll', Ticket::class)) {
+        if (! $viewAll) {
             $tickets = $tickets->filter(
                 fn (Ticket $ticket): bool => $ticket->customer_id === $user->id
                     || $ticket->agent_id === $user->id

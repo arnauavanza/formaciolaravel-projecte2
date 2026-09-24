@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
+use App\Exceptions\DomainRuleException;
 use App\Models\Loan;
-use DomainException;
 
 class CreateLoanService
 {
@@ -17,8 +17,9 @@ class CreateLoanService
             is_null($attributes['returned_at'] ?? null)
             && $this->loans->hasActiveBookConflict($attributes['book_id'])
         ) {
-            throw new DomainException(
-                'This book already has an active loan.'
+            throw new DomainRuleException(
+                'This book already has an active loan.',
+                409,
             );
         }
 

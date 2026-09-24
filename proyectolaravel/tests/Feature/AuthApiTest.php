@@ -74,6 +74,20 @@ class AuthApiTest extends TestCase
             ->assertUnauthorized();
     }
 
+    public function test_inactive_user_cannot_login(): void
+    {
+        $user = User::factory()->create([
+            'is_active' => false,
+            'password' => Hash::make('password'),
+        ]);
+
+        $this->postJson('/api/auth/login', [
+            'email' => $user->email,
+            'password' => 'password',
+        ])
+            ->assertForbidden();
+    }
+
     public function test_authenticated_user_can_see_their_profile(): void
     {
         $user = User::factory()->create();

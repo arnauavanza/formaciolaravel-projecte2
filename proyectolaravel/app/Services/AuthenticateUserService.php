@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Hash;
 
 class AuthenticateUserService
@@ -15,9 +16,18 @@ class AuthenticateUserService
 
         if (
             $user === null
-            || ! Hash::check($credentials['password'], $user->password)
+            || ! Hash::check(
+                $credentials['password'],
+                $user->password
+            )
         ) {
             return null;
+        }
+
+        if (! $user->is_active) {
+            throw new AuthorizationException(
+                'User account is inactive.'
+            );
         }
 
         return $user;

@@ -3,9 +3,9 @@
 namespace App\Services;
 
 use App\Enums\TicketStatus;
+use App\Exceptions\DomainRuleException;
 use App\Models\Ticket;
 use App\Repositories\Contracts\TicketRepositoryInterface;
-use DomainException;
 
 class UpdateTicketService
 {
@@ -20,15 +20,18 @@ class UpdateTicketService
                 ? $attributes['status']
                 : TicketStatus::from($attributes['status']);
 
-            if (! $this->canTransition($ticket->status, $nextStatus)) {
-                throw new DomainException(
+            if (! $ticket->status->canTransitionTo($nextStatus)) {
+                throw new DomainRuleException(
                     'Invalid ticket status transition.'
                 );
             }
 
             $attributes['status'] = $nextStatus;
 
-            if ($nextStatus === TicketStatus::Resolved) {
+            if (
+                $nextStatus === TicketStatus::Resolved
+                && $ticket->resolved_at === null
+            ) {
                 $attributes['resolved_at'] = now();
             }
         }
@@ -36,21 +39,5 @@ class UpdateTicketService
         $attributes['last_activity_at'] = now();
 
         return $this->tickets->update($ticket, $attributes);
-    }
-
-    private function canTransition(
-        TicketStatus $currentStatus,
-        TicketStatus $nextStatus
-    ): bool {
-        if ($currentStatus === $nextStatus) {
-            return true;
-        }
-
-        return match ($currentStatus) {
-            TicketStatus::Open => $nextStatus === TicketStatus::InProgress,
-            TicketStatus::InProgress => $nextStatus === TicketStatus::Resolved,
-            TicketStatus::Resolved => false,
-            TicketStatus::Closed => false,
-        };
     }
 }

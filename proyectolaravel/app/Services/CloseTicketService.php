@@ -3,10 +3,10 @@
 namespace App\Services;
 
 use App\Enums\TicketStatus;
+use App\Exceptions\DomainRuleException;
 use App\Jobs\GenerateTicketHistoryPdf;
 use App\Models\Ticket;
 use App\Repositories\Contracts\TicketRepositoryInterface;
-use DomainException;
 
 class CloseTicketService
 {
@@ -17,7 +17,7 @@ class CloseTicketService
     public function execute(Ticket $ticket): Ticket
     {
         if ($ticket->status !== TicketStatus::Resolved) {
-            throw new DomainException(
+            throw new DomainRuleException(
                 'Only resolved tickets can be closed.'
             );
         }
@@ -31,7 +31,8 @@ class CloseTicketService
             'last_activity_at' => $now,
         ]);
 
-        GenerateTicketHistoryPdf::dispatch($updatedTicket->id);
+        GenerateTicketHistoryPdf::dispatch($updatedTicket->id)
+            ->afterCommit();
 
         return $updatedTicket;
     }

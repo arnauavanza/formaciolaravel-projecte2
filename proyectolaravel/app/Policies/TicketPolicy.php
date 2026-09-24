@@ -71,8 +71,15 @@ class TicketPolicy
             return false;
         }
 
-        return $user->can('tickets.delete_all')
-            || $user->can('tickets.delete');
+        if ($user->can('tickets.delete_all')) {
+            return true;
+        }
+
+        return $user->can('tickets.delete')
+            && in_array($user->id, [
+                $ticket->customer_id,
+                $ticket->agent_id,
+            ], true);
     }
 
     public function comment(User $user, Ticket $ticket): bool

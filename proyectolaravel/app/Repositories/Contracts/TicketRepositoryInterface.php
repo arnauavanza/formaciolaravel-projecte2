@@ -10,6 +10,7 @@ interface TicketRepositoryInterface
 {
     public function paginateVisibleTo(
         User $user,
+        bool $viewAll,
         int $perPage = 15
     ): LengthAwarePaginator;
 

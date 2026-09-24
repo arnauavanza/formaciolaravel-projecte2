@@ -68,6 +68,7 @@ class TicketControllerRepositoryTest extends TestCase
         );
 
         Sanctum::actingAs($admin, [
+            'tickets.read',
             'tickets.create',
         ]);
 

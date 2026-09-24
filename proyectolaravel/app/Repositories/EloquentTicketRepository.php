@@ -6,19 +6,18 @@ use App\Models\Ticket;
 use App\Models\User;
 use App\Repositories\Contracts\TicketRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\Gate;
 
 class EloquentTicketRepository implements TicketRepositoryInterface
 {
     public function paginateVisibleTo(
         User $user,
+        bool $viewAll,
         int $perPage = 15
     ): LengthAwarePaginator {
         $query = Ticket::query()
-            ->with(['customer', 'agent'])
             ->latest();
 
-        if (! Gate::forUser($user)->allows('viewAll', Ticket::class)) {
+        if (! $viewAll) {
             $query->where(function ($query) use ($user) {
                 $query
                     ->where('customer_id', $user->id)
@@ -45,7 +44,7 @@ class EloquentTicketRepository implements TicketRepositoryInterface
     ): Ticket {
         $ticket->update($attributes);
 
-        return $ticket->fresh(['customer', 'agent']);
+        return $ticket->fresh();
     }
 
     public function delete(Ticket $ticket): void

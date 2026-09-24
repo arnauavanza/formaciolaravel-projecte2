@@ -8,6 +8,7 @@ use App\Http\Requests\UpdateBookRequest;
 use App\Http\Resources\BookResource;
 use App\Models\Book;
 use App\Services\CreateBookService;
+use App\Services\DeleteBookService;
 use App\Services\ListBooksService;
 use App\Services\UpdateBookService;
 
@@ -16,8 +17,7 @@ class BookController extends Controller
     public function index(
         BookIndexRequest $request,
         ListBooksService $service
-    )
-    {
+    ) {
         return BookResource::collection(
             $service->execute($request->validated())
         );
@@ -26,8 +26,7 @@ class BookController extends Controller
     public function store(
         StoreBookRequest $request,
         CreateBookService $service
-    )
-    {
+    ) {
         return (new BookResource(
             $service->execute($request->validated())
         ))
@@ -52,15 +51,11 @@ class BookController extends Controller
         );
     }
 
-    public function destroy(Book $book)
-    {
-        if ($book->loans()->exists()) {
-            return response()->json([
-                'message' => 'Cannot delete a book with loan history.',
-            ], 409);
-        }
-
-        $book->delete();
+    public function destroy(
+        Book $book,
+        DeleteBookService $service
+    ) {
+        $service->execute($book);
 
         return response()->noContent();
     }

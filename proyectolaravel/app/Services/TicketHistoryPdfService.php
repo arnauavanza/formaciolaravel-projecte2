@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Enums\TicketStatus;
 use App\Models\Ticket;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Storage;
@@ -24,28 +23,18 @@ class TicketHistoryPdfService
         )->output();
     }
 
-    public function download(Ticket $ticket)
+    public function temporaryUrl(Ticket $ticket): ?string
     {
-        if ($ticket->status !== TicketStatus::Closed) {
-            return response()->json([
-                'message' => 'The PDF is available after the ticket is closed.',
-            ], 409);
-        }
-
         $path = $this->path($ticket);
         $disk = Storage::disk('local');
 
         if (! $disk->exists($path)) {
-            return response()->json([
-                'message' => 'The PDF is still being generated.',
-            ], 409);
+            return null;
         }
 
-        return redirect()->away(
-            $disk->temporaryUrl(
-                $path,
-                now()->addMinutes(5)
-            )
+        return $disk->temporaryUrl(
+            $path,
+            now()->addMinutes(5)
         );
     }
 

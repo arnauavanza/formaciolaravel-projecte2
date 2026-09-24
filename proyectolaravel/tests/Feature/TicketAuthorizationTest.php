@@ -170,6 +170,7 @@ class TicketAuthorizationTest extends TestCase
         $supervisor->assignRole('supervisor');
 
         $agent = User::factory()->create();
+        $agent->assignRole('agent');
         $ticket = Ticket::factory()->create();
 
         $this->authenticate($supervisor);

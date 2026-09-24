@@ -9,12 +9,18 @@ class StoreTicketRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return $this->user()?->can(
+            'create',
+            Ticket::class
+        ) ?? false;
     }
 
     protected function prepareForValidation(): void
     {
-        if (! $this->user()->can('createForAnotherUser', Ticket::class)) {
+        if (! $this->user()->can(
+            'createForAnotherUser',
+            Ticket::class
+        )) {
             $this->merge([
                 'customer_id' => $this->user()->id,
             ]);
@@ -35,11 +41,6 @@ class StoreTicketRequest extends FormRequest
             ],
             'customer_id' => [
                 'required',
-                'integer',
-                'exists:users,id',
-            ],
-            'agent_id' => [
-                'nullable',
                 'integer',
                 'exists:users,id',
             ],

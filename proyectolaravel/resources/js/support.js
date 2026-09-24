@@ -2,8 +2,7 @@ const supportApp = document.getElementById('support-app');
 
 if (supportApp) {
     const state = {
-        token: localStorage.getItem('p2_token'),
-        user: JSON.parse(localStorage.getItem('p2_user') || 'null'),
+        user: null,
         tickets: [],
         selectedTicket: null,
         comments: [],
@@ -39,26 +38,32 @@ if (supportApp) {
     }
 
     function saveSession(payload) {
-        state.token = payload.token;
         state.user = payload.user;
-
-        localStorage.setItem('p2_token', state.token);
-        localStorage.setItem('p2_user', JSON.stringify(state.user));
     }
 
     function clearSession() {
-        state.token = null;
         state.user = null;
         state.tickets = [];
         state.selectedTicket = null;
         state.comments = [];
 
-        localStorage.removeItem('p2_token');
         localStorage.removeItem('p2_user');
     }
 
-    function isAuthenticated() {
-        return Boolean(state.token);
+    async function ensureCsrfToken(headers) {
+        await fetch('/sanctum/csrf-cookie', {
+            credentials: 'same-origin',
+        });
+
+        const cookie = document.cookie
+            .split('; ')
+            .find((value) => value.startsWith('XSRF-TOKEN='));
+
+        if (cookie) {
+            headers['X-XSRF-TOKEN'] = decodeURIComponent(
+                cookie.split('=').slice(1).join('=')
+            );
+        }
     }
 
     async function apiRequest(url, options = {}) {
@@ -70,10 +75,13 @@ if (supportApp) {
         const request = {
             ...options,
             headers,
+            credentials: 'same-origin',
         };
 
-        if (state.token) {
-            headers.Authorization = `Bearer ${state.token}`;
+        if (! ['GET', 'HEAD', 'OPTIONS'].includes(
+            (request.method || 'GET').toUpperCase()
+        )) {
+            await ensureCsrfToken(headers);
         }
 
         if (
@@ -113,9 +121,9 @@ if (supportApp) {
 
     async function downloadFile(url, filename) {
         const response = await fetch(url, {
+            credentials: 'same-origin',
             headers: {
                 Accept: 'application/pdf, application/octet-stream',
-                Authorization: `Bearer ${state.token}`,
             },
         });
 
@@ -501,9 +509,7 @@ if (supportApp) {
 
     async function logout() {
         try {
-            if (state.token) {
-                await apiRequest('/api/auth/logout', { method: 'POST' });
-            }
+            await apiRequest('/api/auth/logout', { method: 'POST' });
         } finally {
             clearSession();
             showAuth();
@@ -586,15 +592,9 @@ if (supportApp) {
         setupAuthTabs();
         setupEvents();
 
-        if (! isAuthenticated()) {
-            showAuth();
-            return;
-        }
-
         try {
             const payload = await apiRequest('/api/auth/me');
             state.user = payload.data || payload;
-            localStorage.setItem('p2_user', JSON.stringify(state.user));
             showDashboard();
             await loadTickets();
         } catch {

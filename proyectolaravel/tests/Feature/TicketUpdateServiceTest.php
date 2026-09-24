@@ -3,10 +3,10 @@
 namespace Tests\Feature;
 
 use App\Enums\TicketStatus;
+use App\Exceptions\DomainRuleException;
 use App\Models\Ticket;
 use App\Repositories\Contracts\TicketRepositoryInterface;
 use App\Services\UpdateTicketService;
-use DomainException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Fakes\FakeTicketRepository;
 use Tests\TestCase;
@@ -104,7 +104,7 @@ class TicketUpdateServiceTest extends TestCase
             ->resolved()
             ->create();
 
-        $this->expectException(DomainException::class);
+        $this->expectException(DomainRuleException::class);
 
         app(UpdateTicketService::class)
             ->execute($ticket, [

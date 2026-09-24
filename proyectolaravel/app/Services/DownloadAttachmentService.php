@@ -8,17 +8,24 @@ use Illuminate\Support\Facades\Storage;
 
 class DownloadAttachmentService
 {
-    public function execute(Comment $comment, Attachment $attachment)
-    {
-        abort_unless($attachment->comment_id === $comment->id, 404);
+    public function resolve(
+        Comment $comment,
+        Attachment $attachment
+    ): ?array {
+        if ($attachment->comment_id !== $comment->id) {
+            return null;
+        }
 
         $disk = Storage::disk($attachment->disk);
 
-        abort_unless($disk->exists($attachment->path), 404);
+        if (! $disk->exists($attachment->path)) {
+            return null;
+        }
 
-        return $disk->download(
-            $attachment->path,
-            $attachment->original_name
-        );
+        return [
+            'disk' => $attachment->disk,
+            'path' => $attachment->path,
+            'name' => $attachment->original_name,
+        ];
     }
 }

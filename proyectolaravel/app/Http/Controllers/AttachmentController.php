@@ -8,6 +8,7 @@ use App\Models\Attachment;
 use App\Models\Comment;
 use App\Services\DownloadAttachmentService;
 use App\Services\StoreAttachmentService;
+use Illuminate\Support\Facades\Storage;
 
 class AttachmentController extends Controller
 {
@@ -16,8 +17,6 @@ class AttachmentController extends Controller
         Comment $comment,
         StoreAttachmentService $service
     ) {
-        $this->authorize('comment', $comment->ticket);
-
         return (new AttachmentResource(
             $service->execute($comment, $request->file('file'))
         ))
@@ -32,6 +31,13 @@ class AttachmentController extends Controller
     ) {
         $this->authorize('view', $comment->ticket);
 
-        return $service->execute($comment, $attachment);
+        $download = $service->resolve($comment, $attachment);
+
+        abort_unless($download !== null, 404);
+
+        return Storage::disk($download['disk'])->download(
+            $download['path'],
+            $download['name'],
+        );
     }
 }

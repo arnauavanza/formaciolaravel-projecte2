@@ -3,13 +3,14 @@
 namespace Tests\Feature;
 
 use App\Enums\TicketStatus;
+use App\Exceptions\DomainRuleException;
 use App\Jobs\GenerateTicketHistoryPdf;
 use App\Jobs\SendTicketAssignedMail;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\AssignTicketService;
 use App\Services\CloseTicketService;
-use DomainException;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
@@ -22,6 +23,7 @@ class TicketWorkflowServiceTest extends TestCase
     {
         parent::setUp();
 
+        $this->seed(RolePermissionSeeder::class);
         Queue::fake();
     }
 
@@ -29,6 +31,7 @@ class TicketWorkflowServiceTest extends TestCase
     {
         $ticket = Ticket::factory()->create();
         $agent = User::factory()->create();
+        $agent->assignRole('agent');
 
         $updatedTicket = app(AssignTicketService::class)
             ->execute($ticket, $agent->id);
@@ -78,7 +81,7 @@ class TicketWorkflowServiceTest extends TestCase
     {
         $ticket = Ticket::factory()->create();
 
-        $this->expectException(DomainException::class);
+        $this->expectException(DomainRuleException::class);
 
         app(CloseTicketService::class)
             ->execute($ticket);
@@ -91,8 +94,9 @@ class TicketWorkflowServiceTest extends TestCase
             ->create();
 
         $agent = User::factory()->create();
+        $agent->assignRole('agent');
 
-        $this->expectException(DomainException::class);
+        $this->expectException(DomainRuleException::class);
 
         app(AssignTicketService::class)
             ->execute($ticket, $agent->id);

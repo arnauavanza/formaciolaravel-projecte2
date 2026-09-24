@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
+use App\Exceptions\DomainRuleException;
 use App\Models\Loan;
-use DomainException;
 
 class ReturnLoanService
 {
@@ -14,8 +14,9 @@ class ReturnLoanService
     public function execute(Loan $loan): Loan
     {
         if ($loan->returned_at !== null) {
-            throw new DomainException(
-                'This loan has already been returned.'
+            throw new DomainRuleException(
+                'This loan has already been returned.',
+                409,
             );
         }
 

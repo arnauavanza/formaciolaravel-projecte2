@@ -2,31 +2,30 @@
 
 namespace App\Services;
 
-use App\Http\Resources\UserResource;
 use App\Models\User;
 
 class IssueAuthTokenService
 {
-    public function execute(User $user, int $status = 200)
+    public function execute(User $user): array
     {
-        $user->loadMissing(['roles.permissions', 'permissions']);
+        $user->loadMissing([
+            'roles.permissions',
+            'permissions',
+        ]);
+
+        $abilities = $user->getAllPermissions()
+            ->pluck('name')
+            ->values()
+            ->all();
 
         $token = $user->createToken(
             'p2-api-token',
-            [
-                'tickets.read',
-                'tickets.create',
-                'tickets.update',
-                'tickets.delete',
-                'tickets.assign',
-                'tickets.close',
-                'comments.create',
-            ]
+            $abilities
         )->plainTextToken;
 
-        return response()->json([
-            'user' => new UserResource($user),
+        return [
+            'user' => $user,
             'token' => $token,
-        ], $status);
+        ];
     }
 }

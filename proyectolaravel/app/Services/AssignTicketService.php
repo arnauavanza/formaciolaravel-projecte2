@@ -3,11 +3,11 @@
 namespace App\Services;
 
 use App\Enums\TicketStatus;
+use App\Exceptions\DomainRuleException;
 use App\Jobs\SendTicketAssignedMail;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Repositories\Contracts\TicketRepositoryInterface;
-use DomainException;
 
 class AssignTicketService
 {
@@ -17,17 +17,20 @@ class AssignTicketService
 
     public function execute(Ticket $ticket, int $agentId): Ticket
     {
-        $agent = User::query()->findOrFail($agentId);
-
         if ($ticket->status === TicketStatus::Closed) {
-            throw new DomainException(
+            throw new DomainRuleException(
                 'Closed tickets cannot be assigned.'
             );
         }
 
-        if (! $agent->is_active) {
-            throw new DomainException(
-                'Inactive users cannot be assigned as agents.'
+        $agent = User::query()
+            ->role('agent')
+            ->where('is_active', true)
+            ->find($agentId);
+
+        if ($agent === null) {
+            throw new DomainRuleException(
+                'Only active agents can be assigned.'
             );
         }
 
@@ -39,7 +42,7 @@ class AssignTicketService
         SendTicketAssignedMail::dispatch(
             $updatedTicket->id,
             $agent->id,
-        );
+        )->afterCommit();
 
         return $updatedTicket;
     }

@@ -8,18 +8,17 @@ use App\Http\Requests\UpdateLoanRequest;
 use App\Http\Resources\LoanResource;
 use App\Models\Loan;
 use App\Services\CreateLoanService;
+use App\Services\DeleteLoanService;
 use App\Services\ListLoansService;
 use App\Services\ReturnLoanService;
 use App\Services\UpdateLoanService;
-use DomainException;
 
 class LoanController extends Controller
 {
     public function index(
         LoanIndexRequest $request,
         ListLoansService $service
-    )
-    {
+    ) {
         return LoanResource::collection(
             $service->execute($request->validated())
         );
@@ -28,13 +27,10 @@ class LoanController extends Controller
     public function store(
         StoreLoanRequest $request,
         CreateLoanService $service
-    )
-    {
-        return $this->handleConflict(
-            fn () => (new LoanResource(
-                $service->execute($request->validated())
-            ))->response()->setStatusCode(201)
-        );
+    ) {
+        return (new LoanResource(
+            $service->execute($request->validated())
+        ))->response()->setStatusCode(201);
     }
 
     public function show(Loan $loan)
@@ -50,18 +46,17 @@ class LoanController extends Controller
         UpdateLoanRequest $request,
         Loan $loan,
         UpdateLoanService $service
-    )
-    {
-        return $this->handleConflict(
-            fn () => new LoanResource(
-                $service->execute($loan, $request->validated())
-            )
+    ) {
+        return new LoanResource(
+            $service->execute($loan, $request->validated())
         );
     }
 
-    public function destroy(Loan $loan)
-    {
-        $loan->delete();
+    public function destroy(
+        Loan $loan,
+        DeleteLoanService $service
+    ) {
+        $service->execute($loan);
 
         return response()->noContent();
     }
@@ -69,23 +64,9 @@ class LoanController extends Controller
     public function returnLoan(
         Loan $loan,
         ReturnLoanService $service
-    )
-    {
-        return $this->handleConflict(
-            fn () => new LoanResource(
-                $service->execute($loan)
-            )
+    ) {
+        return new LoanResource(
+            $service->execute($loan)
         );
-    }
-
-    private function handleConflict(callable $callback)
-    {
-        try {
-            return $callback();
-        } catch (DomainException $exception) {
-            return response()->json([
-                'message' => $exception->getMessage(),
-            ], 409);
-        }
     }
 }
