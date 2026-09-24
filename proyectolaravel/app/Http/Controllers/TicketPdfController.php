@@ -13,15 +13,6 @@ class TicketPdfController extends Controller
     ) {
         $this->authorize('view', $ticket);
 
-        $filename = "ticket-{$ticket->id}-history.pdf";
-
-        return response(
-            $service->generate($ticket),
-            200,
-            [
-                'Content-Type' => 'application/pdf',
-                'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-            ],
-        );
+        return $service->download($ticket);
     }
 }

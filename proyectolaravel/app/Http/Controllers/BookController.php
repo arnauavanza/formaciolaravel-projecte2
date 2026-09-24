@@ -7,36 +7,30 @@ use App\Http\Requests\StoreBookRequest;
 use App\Http\Requests\UpdateBookRequest;
 use App\Http\Resources\BookResource;
 use App\Models\Book;
+use App\Services\CreateBookService;
+use App\Services\ListBooksService;
+use App\Services\UpdateBookService;
 
 class BookController extends Controller
 {
-    public function index(BookIndexRequest $request)
+    public function index(
+        BookIndexRequest $request,
+        ListBooksService $service
+    )
     {
-        $filters = $request->validated();
-
-        $books = Book::query()
-            ->with(['author', 'genres'])
-            ->orderBy(
-                $filters['sort'] ?? 'title',
-                $filters['direction'] ?? 'asc'
-            )
-            ->paginate($filters['per_page'] ?? 15);
-
-        return BookResource::collection($books);
+        return BookResource::collection(
+            $service->execute($request->validated())
+        );
     }
 
-    public function store(StoreBookRequest $request)
+    public function store(
+        StoreBookRequest $request,
+        CreateBookService $service
+    )
     {
-        $validated = $request->validated();
-        $genreIds = $validated['genre_ids'] ?? [];
-
-        unset($validated['genre_ids']);
-
-        $book = Book::create($validated);
-        $book->genres()->sync($genreIds);
-        $book->load(['author', 'genres']);
-
-        return (new BookResource($book))
+        return (new BookResource(
+            $service->execute($request->validated())
+        ))
             ->response()
             ->setStatusCode(201);
     }
@@ -50,22 +44,11 @@ class BookController extends Controller
 
     public function update(
         UpdateBookRequest $request,
-        Book $book
+        Book $book,
+        UpdateBookService $service
     ) {
-        $validated = $request->validated();
-        $hasGenres = array_key_exists('genre_ids', $validated);
-        $genreIds = $validated['genre_ids'] ?? [];
-
-        unset($validated['genre_ids']);
-
-        $book->update($validated);
-
-        if ($hasGenres) {
-            $book->genres()->sync($genreIds);
-        }
-
         return new BookResource(
-            $book->fresh(['author', 'genres'])
+            $service->execute($book, $request->validated())
         );
     }
 

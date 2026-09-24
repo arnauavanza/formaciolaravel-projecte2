@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreCommentRequest;
 use App\Http\Resources\CommentResource;
+use App\Models\Comment;
 use App\Models\Ticket;
+use App\Services\StoreCommentService;
 
 class CommentController extends Controller
 {
@@ -20,22 +22,22 @@ class CommentController extends Controller
         return CommentResource::collection($comments);
     }
 
-    public function store(
-        StoreCommentRequest $request,
-        Ticket $ticket
-    ) {
+    public function store(StoreCommentRequest $request, Ticket $ticket, StoreCommentService $service)
+    {
         $this->authorize('comment', $ticket);
 
-        $comment = $ticket->comments()->create([
-            'user_id' => $request->user()->id,
-            'body' => $request->validated('body'),
-        ]);
+        return $this->createdCommentResponse(
+            $service->execute(
+                $ticket,
+                $request->user(),
+                $request->validated('body')
+            )
+        );
+    }
 
-        $ticket->update([
-            'last_activity_at' => now(),
-        ]);
-
-        return (new CommentResource($comment->load(['user', 'attachments'])))
+    private function createdCommentResponse(Comment $comment)
+    {
+        return (new CommentResource($comment))
             ->response()
             ->setStatusCode(201);
     }

@@ -41,6 +41,27 @@ class TicketPdfJobTest extends TestCase
         );
     }
 
+    public function test_pdf_job_is_idempotent(): void
+    {
+        Storage::fake('local');
+        Queue::fake();
+
+        $ticket = Ticket::factory()->closed()->create([
+            'status' => TicketStatus::Closed,
+        ]);
+
+        $job = new GenerateTicketHistoryPdf($ticket->id);
+        $service = app(TicketHistoryPdfService::class);
+
+        $job->handle($service);
+        $job->handle($service);
+
+        Queue::assertPushed(
+            SendTicketResolvedMail::class,
+            1
+        );
+    }
+
     public function test_resolved_mail_job_sends_mail_with_pdf_path(): void
     {
         Storage::fake('local');
@@ -54,15 +75,19 @@ class TicketPdfJobTest extends TestCase
 
         Storage::disk('local')->put($path, 'fake-pdf');
 
-        (new SendTicketResolvedMail(
+        $job = new SendTicketResolvedMail(
             $ticket->id,
             $path,
-        ))->handle();
+        );
+
+        $job->handle();
+        $job->handle();
 
         Mail::assertSent(
             TicketResolvedMail::class,
             fn (TicketResolvedMail $mail): bool => $mail->ticket->id === $ticket->id
                 && $mail->pdfPath === $path,
         );
+        Mail::assertSentTimes(TicketResolvedMail::class, 1);
     }
 }

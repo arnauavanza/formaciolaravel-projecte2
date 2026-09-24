@@ -35,6 +35,7 @@ class SendTicketResolvedMail implements ShouldBeUnique, ShouldQueue
             $ticket === null
             || $ticket->status !== TicketStatus::Closed
             || $ticket->customer === null
+            || $ticket->resolved_mail_sent_at !== null
         ) {
             return;
         }
@@ -44,6 +45,10 @@ class SendTicketResolvedMail implements ShouldBeUnique, ShouldQueue
                 $ticket,
                 $this->pdfPath,
             ));
+
+        $ticket->forceFill([
+            'resolved_mail_sent_at' => now(),
+        ])->save();
     }
 
     public function uniqueId(): string

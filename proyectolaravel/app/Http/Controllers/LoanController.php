@@ -7,80 +7,55 @@ use App\Http\Requests\StoreLoanRequest;
 use App\Http\Requests\UpdateLoanRequest;
 use App\Http\Resources\LoanResource;
 use App\Models\Loan;
+use App\Services\CreateLoanService;
+use App\Services\ListLoansService;
+use App\Services\ReturnLoanService;
+use App\Services\UpdateLoanService;
+use DomainException;
 
 class LoanController extends Controller
 {
-    public function index(LoanIndexRequest $request)
+    public function index(
+        LoanIndexRequest $request,
+        ListLoansService $service
+    )
     {
-        $filters = $request->validated();
-
-        $query = Loan::query()
-            ->with([
-                'member',
-                'book.author',
-                'book.genres',
-            ]);
-
-        if (array_key_exists('active', $filters)) {
-            if (filter_var($filters['active'], FILTER_VALIDATE_BOOLEAN)) {
-                $query->active();
-            } else {
-                $query->whereNotNull('returned_at');
-            }
-        }
-
-        if (isset($filters['member_id'])) {
-            $query->where('member_id', $filters['member_id']);
-        }
-
-        $loans = $query
-            ->orderBy(
-                $filters['sort'] ?? 'borrowed_at',
-                $filters['direction'] ?? 'desc'
-            )
-            ->paginate($filters['per_page'] ?? 15);
-
-        return LoanResource::collection($loans);
+        return LoanResource::collection(
+            $service->execute($request->validated())
+        );
     }
 
-    public function store(StoreLoanRequest $request)
+    public function store(
+        StoreLoanRequest $request,
+        CreateLoanService $service
+    )
     {
-        $validated = $request->validated();
-
-        if (
-            is_null($validated['returned_at'] ?? null)
-            && $this->hasActiveBookConflict($validated['book_id'])
-        ) {
-            return $this->activeBookConflictResponse();
-        }
-
-        $loan = Loan::create($validated);
-
-        return (new LoanResource($this->loadRelations($loan)))
-            ->response()
-            ->setStatusCode(201);
+        return $this->handleConflict(
+            fn () => (new LoanResource(
+                $service->execute($request->validated())
+            ))->response()->setStatusCode(201)
+        );
     }
 
     public function show(Loan $loan)
     {
-        return new LoanResource($this->loadRelations($loan));
+        return new LoanResource($loan->load([
+            'member',
+            'book.author',
+            'book.genres',
+        ]));
     }
 
-    public function update(UpdateLoanRequest $request, Loan $loan)
+    public function update(
+        UpdateLoanRequest $request,
+        Loan $loan,
+        UpdateLoanService $service
+    )
     {
-        $validated = $request->validated();
-
-        if (
-            is_null($validated['returned_at'] ?? null)
-            && $this->hasActiveBookConflict($validated['book_id'], $loan->id)
-        ) {
-            return $this->activeBookConflictResponse();
-        }
-
-        $loan->update($validated);
-
-        return new LoanResource(
-            $this->loadRelations($loan->fresh())
+        return $this->handleConflict(
+            fn () => new LoanResource(
+                $service->execute($loan, $request->validated())
+            )
         );
     }
 
@@ -91,48 +66,26 @@ class LoanController extends Controller
         return response()->noContent();
     }
 
-    public function returnLoan(Loan $loan)
+    public function returnLoan(
+        Loan $loan,
+        ReturnLoanService $service
+    )
     {
-        if ($loan->returned_at !== null) {
-            return response()->json([
-                'message' => 'This loan has already been returned.',
-            ], 409);
-        }
-
-        $loan->update([
-            'returned_at' => now(),
-        ]);
-
-        return new LoanResource(
-            $this->loadRelations($loan->fresh())
+        return $this->handleConflict(
+            fn () => new LoanResource(
+                $service->execute($loan)
+            )
         );
     }
 
-    private function loadRelations(Loan $loan): Loan
+    private function handleConflict(callable $callback)
     {
-        return $loan->load([
-            'member',
-            'book.author',
-            'book.genres',
-        ]);
-    }
-
-    private function hasActiveBookConflict(int $bookId, ?int $ignoredLoanId = null): bool
-    {
-        return Loan::query()
-            ->active()
-            ->where('book_id', $bookId)
-            ->when(
-                $ignoredLoanId,
-                fn ($query) => $query->where('id', '!=', $ignoredLoanId)
-            )
-            ->exists();
-    }
-
-    private function activeBookConflictResponse()
-    {
-        return response()->json([
-            'message' => 'This book already has an active loan.',
-        ], 409);
+        try {
+            return $callback();
+        } catch (DomainException $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], 409);
+        }
     }
 }

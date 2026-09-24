@@ -6,6 +6,7 @@ use App\Models\Ticket;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -22,10 +23,13 @@ class TicketPdfTest extends TestCase
 
     public function test_customer_can_download_their_ticket_history(): void
     {
+        Storage::fake('local');
+
         $customer = User::factory()->create();
         $customer->assignRole('customer');
 
         $ticket = Ticket::factory()
+            ->closed()
             ->for($customer, 'customer')
             ->create();
 
@@ -34,16 +38,48 @@ class TicketPdfTest extends TestCase
             'body' => 'Comment included in the PDF.',
         ]);
 
+        Storage::disk('local')->put(
+            "tickets/{$ticket->id}/history.pdf",
+            'fake-pdf'
+        );
+
         Sanctum::actingAs($customer, [
             'tickets.read',
         ]);
 
-        $this->get("/api/tickets/{$ticket->id}/pdf")
-            ->assertOk()
-            ->assertHeader('content-type', 'application/pdf')
-            ->assertHeader(
-                'content-disposition',
-                "attachment; filename=\"ticket-{$ticket->id}-history.pdf\""
+        $response = $this->get("/api/tickets/{$ticket->id}/pdf");
+
+        $response
+            ->assertRedirect()
+            ->assertRedirectContains(
+                "/tickets/{$ticket->id}/history.pdf"
+            );
+
+        $this->assertStringContainsString(
+            'expiration=',
+            $response->headers->get('Location')
+        );
+    }
+
+    public function test_pdf_is_not_available_before_ticket_is_closed(): void
+    {
+        $customer = User::factory()->create();
+        $customer->assignRole('customer');
+
+        $ticket = Ticket::factory()
+            ->inProgress()
+            ->for($customer, 'customer')
+            ->create();
+
+        Sanctum::actingAs($customer, [
+            'tickets.read',
+        ]);
+
+        $this->getJson("/api/tickets/{$ticket->id}/pdf")
+            ->assertStatus(409)
+            ->assertJsonPath(
+                'message',
+                'The PDF is available after the ticket is closed.'
             );
     }
 

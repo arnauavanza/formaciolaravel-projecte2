@@ -30,6 +30,7 @@ class Ticket extends Model
             'last_activity_at' => 'datetime',
             'resolved_at' => 'datetime',
             'closed_at' => 'datetime',
+            'resolved_mail_sent_at' => 'datetime',
         ];
     }
 

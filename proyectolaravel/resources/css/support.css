@@ -197,6 +197,11 @@ select:focus {
     color: var(--support-ink);
 }
 
+.button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
 .button-danger {
     background: #fff0f2;
     color: var(--support-danger);

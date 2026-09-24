@@ -31,7 +31,7 @@ class TicketWorkflowServiceTest extends TestCase
         $agent = User::factory()->create();
 
         $updatedTicket = app(AssignTicketService::class)
-            ->execute($ticket, $agent);
+            ->execute($ticket, $agent->id);
 
         $this->assertSame($agent->id, $updatedTicket->agent_id);
 
@@ -95,6 +95,6 @@ class TicketWorkflowServiceTest extends TestCase
         $this->expectException(DomainException::class);
 
         app(AssignTicketService::class)
-            ->execute($ticket, $agent);
+            ->execute($ticket, $agent->id);
     }
 }

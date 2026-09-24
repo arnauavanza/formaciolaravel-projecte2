@@ -36,8 +36,13 @@ class GenerateTicketHistoryPdf implements ShouldBeUnique, ShouldQueue
         }
 
         $path = "tickets/{$ticket->id}/history.pdf";
+        $disk = Storage::disk('local');
 
-        Storage::disk('local')->put(
+        if ($disk->exists($path)) {
+            return;
+        }
+
+        $disk->put(
             $path,
             $service->generate($ticket),
         );

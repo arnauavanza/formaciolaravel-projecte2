@@ -57,6 +57,26 @@ class TicketApiTest extends TestCase
         ]);
     }
 
+    public function test_customer_can_create_a_ticket_without_customer_id(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+
+        $customer = User::factory()->create();
+        $customer->assignRole('customer');
+
+        Sanctum::actingAs($customer, [
+            'tickets.read',
+            'tickets.create',
+        ]);
+
+        $this->postJson('/api/tickets', [
+            'title' => 'No puedo acceder a mi cuenta',
+            'description' => 'El acceso falla.',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.customer_id', $customer->id);
+    }
+
     public function test_ticket_creation_is_validated(): void
     {
         $this->authenticate();

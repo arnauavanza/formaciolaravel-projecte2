@@ -15,8 +15,10 @@ class AssignTicketService
         private TicketRepositoryInterface $tickets
     ) {}
 
-    public function execute(Ticket $ticket, User $agent): Ticket
+    public function execute(Ticket $ticket, int $agentId): Ticket
     {
+        $agent = User::query()->findOrFail($agentId);
+
         if ($ticket->status === TicketStatus::Closed) {
             throw new DomainException(
                 'Closed tickets cannot be assigned.'

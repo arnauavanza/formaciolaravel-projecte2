@@ -46,7 +46,14 @@ Route::middleware([
 
     Route::post('auth/logout', [AuthController::class, 'logout'])
         ->name('auth.logout');
+});
 
+Route::middleware([
+    'auth:sanctum',
+    'active.user',
+    'log.authenticated',
+    'permission:tickets.read',
+])->group(function () {
     Route::post('tickets/{ticket}/assign', [TicketController::class, 'assign'])
         ->name('tickets.assign');
 

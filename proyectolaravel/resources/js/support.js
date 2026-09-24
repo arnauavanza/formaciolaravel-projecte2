@@ -120,7 +120,18 @@ if (supportApp) {
         });
 
         if (! response.ok) {
-            throw new Error(`Download failed (${response.status})`);
+            const responseText = await response.text();
+            let payload = null;
+
+            try {
+                payload = JSON.parse(responseText);
+            } catch {
+                payload = { message: responseText };
+            }
+
+            throw new Error(
+                payload?.message || `Download failed (${response.status})`
+            );
         }
 
         const blob = await response.blob();
@@ -238,6 +249,11 @@ if (supportApp) {
                 ? ticket.status
                 : 'resolved';
         byId('close-ticket-button').disabled = ticket.status !== 'resolved';
+        byId('download-pdf-button').disabled = ticket.status !== 'closed';
+        byId('download-pdf-button').title =
+            ticket.status === 'closed'
+                ? 'Descargar PDF'
+                : 'Disponible cuando el ticket esté cerrado';
         renderComments();
     }
 
@@ -439,7 +455,11 @@ if (supportApp) {
     }
 
     async function downloadPdf() {
-        if (! state.selectedTicket) {
+        if (
+            ! state.selectedTicket
+            || state.selectedTicket.status !== 'closed'
+        ) {
+            showToast('El PDF estará disponible cuando el ticket esté cerrado.');
             return;
         }
 
