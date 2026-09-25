@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->redirectGuestsTo(fn (): ?string => null);
+        $middleware->statefulApi();
 
         $middleware->alias([
             'active.user' => EnsureUserIsActive::class,
@@ -38,7 +39,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $exceptions->render(function (
             DomainRuleException $exception,
-            Request $request
+            Request $request,
         ) {
             if ($request->is('api/*') || $request->expectsJson()) {
                 return response()->json([

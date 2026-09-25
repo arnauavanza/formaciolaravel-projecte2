@@ -94,6 +94,41 @@ class AttachmentApiTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_participant_cannot_upload_to_another_participants_comment(): void
+    {
+        Storage::fake('local');
+
+        $customer = User::factory()->create();
+        $customer->assignRole('customer');
+
+        $agent = User::factory()->create();
+        $agent->assignRole('agent');
+
+        $ticket = Ticket::factory()
+            ->for($customer, 'customer')
+            ->for($agent, 'agent')
+            ->create();
+
+        $comment = $ticket->comments()->create([
+            'user_id' => $customer->id,
+            'body' => 'Customer comment.',
+        ]);
+
+        $this->authenticate($agent);
+
+        $this->post(
+            "/api/comments/{$comment->id}/attachments",
+            [
+                'file' => UploadedFile::fake()->create(
+                    'agent.pdf',
+                    100,
+                    'application/pdf',
+                ),
+            ],
+        )
+            ->assertForbidden();
+    }
+
     public function test_attachment_can_be_downloaded(): void
     {
         Storage::fake('local');

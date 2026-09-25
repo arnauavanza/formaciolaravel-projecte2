@@ -5,13 +5,15 @@ namespace App\Http\Controllers;
 use App\Enums\TicketStatus;
 use App\Models\Ticket;
 use App\Services\TicketHistoryPdfService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 
 class TicketPdfController extends Controller
 {
     public function download(
         Ticket $ticket,
-        TicketHistoryPdfService $service
-    ) {
+        TicketHistoryPdfService $service,
+    ): JsonResponse|RedirectResponse {
         $this->authorize('view', $ticket);
 
         if ($ticket->status !== TicketStatus::Closed) {

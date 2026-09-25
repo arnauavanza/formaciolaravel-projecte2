@@ -13,35 +13,38 @@ use App\Services\CloseTicketService;
 use App\Services\CreateTicketService;
 use App\Services\ListTicketsService;
 use App\Services\UpdateTicketService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 
 class TicketController extends Controller
 {
     public function __construct(
-        private TicketRepositoryInterface $tickets
+        private readonly TicketRepositoryInterface $tickets,
     ) {}
 
     public function index(
         Request $request,
-        ListTicketsService $service
-    ) {
+        ListTicketsService $service,
+    ): AnonymousResourceCollection {
         $this->authorize('viewAny', Ticket::class);
 
         return TicketResource::collection(
-            $service->execute($request->user())
+            $service->execute($request->user()),
         );
     }
 
     public function store(
         StoreTicketRequest $request,
-        CreateTicketService $service
-    ) {
+        CreateTicketService $service,
+    ): JsonResponse {
         return (new TicketResource(
-            $service->execute($request->validated())
+            $service->execute($request->validated()),
         ))->response()->setStatusCode(201);
     }
 
-    public function show(Ticket $ticket)
+    public function show(Ticket $ticket): TicketResource
     {
         $this->authorize('view', $ticket);
 
@@ -51,15 +54,17 @@ class TicketController extends Controller
     public function assign(
         AssignTicketRequest $request,
         Ticket $ticket,
-        AssignTicketService $service
-    ) {
+        AssignTicketService $service,
+    ): TicketResource {
         return new TicketResource(
-            $service->execute($ticket, $request->validated('agent_id'))
+            $service->execute($ticket, $request->validated('agent_id')),
         );
     }
 
-    public function close(Ticket $ticket, CloseTicketService $service)
-    {
+    public function close(
+        Ticket $ticket,
+        CloseTicketService $service,
+    ): TicketResource {
         $this->authorize('close', $ticket);
 
         return new TicketResource($service->execute($ticket));
@@ -68,14 +73,14 @@ class TicketController extends Controller
     public function update(
         UpdateTicketRequest $request,
         Ticket $ticket,
-        UpdateTicketService $service
-    ) {
+        UpdateTicketService $service,
+    ): TicketResource {
         return new TicketResource(
-            $service->execute($ticket, $request->validated())
+            $service->execute($ticket, $request->validated()),
         );
     }
 
-    public function destroy(Ticket $ticket)
+    public function destroy(Ticket $ticket): Response
     {
         $this->authorize('delete', $ticket);
         $this->tickets->delete($ticket);

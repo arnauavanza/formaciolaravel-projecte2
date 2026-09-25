@@ -36,8 +36,8 @@ class AuthApiTest extends TestCase
                     'name',
                     'email',
                 ],
-                'token',
-            ]);
+            ])
+            ->assertJsonMissingPath('token');
 
         $this->assertDatabaseHas('users', [
             'email' => 'ana@example.com',
@@ -57,8 +57,8 @@ class AuthApiTest extends TestCase
             ->assertOk()
             ->assertJsonStructure([
                 'user',
-                'token',
-            ]);
+            ])
+            ->assertJsonMissingPath('token');
     }
 
     public function test_invalid_credentials_are_rejected(): void

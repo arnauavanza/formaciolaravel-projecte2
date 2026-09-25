@@ -34,11 +34,11 @@ class TicketHistoryPdfService
 
         return $disk->temporaryUrl(
             $path,
-            now()->addMinutes(5)
+            now()->addMinutes(5),
         );
     }
 
-    private function path(Ticket $ticket): string
+    public function path(Ticket $ticket): string
     {
         return "tickets/{$ticket->id}/history.pdf";
     }

@@ -7,10 +7,13 @@ use App\Http\Requests\StoreAuthorRequest;
 use App\Http\Requests\UpdateAuthorRequest;
 use App\Http\Resources\AuthorResource;
 use App\Models\Author;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 
 class AuthorController extends Controller
 {
-    public function index(AuthorIndexRequest $request)
+    public function index(AuthorIndexRequest $request): AnonymousResourceCollection
     {
         $perPage = (int) ($request->validated()['per_page'] ?? 15);
 
@@ -21,7 +24,7 @@ class AuthorController extends Controller
         return AuthorResource::collection($authors);
     }
 
-    public function store(StoreAuthorRequest $request)
+    public function store(StoreAuthorRequest $request): JsonResponse
     {
         $author = Author::create($request->validated());
 
@@ -30,21 +33,21 @@ class AuthorController extends Controller
             ->setStatusCode(201);
     }
 
-    public function show(Author $author)
+    public function show(Author $author): AuthorResource
     {
         return new AuthorResource($author);
     }
 
     public function update(
         UpdateAuthorRequest $request,
-        Author $author
-    ) {
+        Author $author,
+    ): AuthorResource {
         $author->update($request->validated());
 
         return new AuthorResource($author->fresh());
     }
 
-    public function destroy(Author $author)
+    public function destroy(Author $author): JsonResponse|Response
     {
         if ($author->books()->whereHas('loans')->exists()) {
             return response()->json([

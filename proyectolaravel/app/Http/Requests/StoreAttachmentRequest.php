@@ -13,6 +13,7 @@ class StoreAttachmentRequest extends FormRequest
 
         return $user !== null
             && $comment !== null
+            && $comment->user_id === $user->id
             && $user->can('comment', $comment->ticket);
     }
 

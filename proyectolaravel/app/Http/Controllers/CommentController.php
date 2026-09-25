@@ -7,10 +7,12 @@ use App\Http\Resources\CommentResource;
 use App\Models\Comment;
 use App\Models\Ticket;
 use App\Services\StoreCommentService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class CommentController extends Controller
 {
-    public function index(Ticket $ticket)
+    public function index(Ticket $ticket): AnonymousResourceCollection
     {
         $this->authorize('view', $ticket);
 
@@ -22,18 +24,21 @@ class CommentController extends Controller
         return CommentResource::collection($comments);
     }
 
-    public function store(StoreCommentRequest $request, Ticket $ticket, StoreCommentService $service)
-    {
+    public function store(
+        StoreCommentRequest $request,
+        Ticket $ticket,
+        StoreCommentService $service,
+    ): JsonResponse {
         return $this->createdCommentResponse(
             $service->execute(
                 $ticket,
                 $request->user(),
-                $request->validated('body')
-            )
+                $request->validated('body'),
+            ),
         );
     }
 
-    private function createdCommentResponse(Comment $comment)
+    private function createdCommentResponse(Comment $comment): JsonResponse
     {
         return (new CommentResource($comment))
             ->response()

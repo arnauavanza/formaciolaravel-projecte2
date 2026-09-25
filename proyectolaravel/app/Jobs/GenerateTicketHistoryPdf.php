@@ -21,7 +21,7 @@ class GenerateTicketHistoryPdf implements ShouldBeUnique, ShouldQueue
     public int $uniqueFor = 3600;
 
     public function __construct(
-        public int $ticketId
+        public int $ticketId,
     ) {}
 
     public function handle(TicketHistoryPdfService $service): void
@@ -35,7 +35,7 @@ class GenerateTicketHistoryPdf implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        $path = "tickets/{$ticket->id}/history.pdf";
+        $path = $service->path($ticket);
         $disk = Storage::disk('local');
 
         if (! $disk->exists($path)) {

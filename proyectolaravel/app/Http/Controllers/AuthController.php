@@ -6,67 +6,82 @@ use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Resources\UserResource;
 use App\Services\AuthenticateUserService;
-use App\Services\IssueAuthTokenService;
 use App\Services\RegisterUserService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
     public function register(
         RegisterRequest $request,
         RegisterUserService $service,
-        IssueAuthTokenService $tokens
-    ) {
-        $data = $tokens->execute(
-            $service->execute($request->validated()),
-        );
-        Auth::guard('web')->login($data['user']);
+    ): JsonResponse {
+        $user = $service->execute($request->validated());
+        $user->loadMissing(['roles.permissions', 'permissions']);
+
+        Auth::guard('web')->login($user);
+
+        if ($request->hasSession()) {
+            $request->session()->regenerate();
+        }
 
         return response()->json([
-            'user' => new UserResource($data['user']),
-            'token' => $data['token'],
+            'user' => new UserResource($user),
         ], 201);
     }
 
     public function login(
         LoginRequest $request,
         AuthenticateUserService $service,
-        IssueAuthTokenService $tokens
-    ) {
+    ): JsonResponse {
         $user = $service->execute($request->validated());
 
         if ($user === null) {
             return $this->invalidCredentialsResponse();
         }
 
-        $data = $tokens->execute($user);
+        $user->loadMissing(['roles.permissions', 'permissions']);
+
         Auth::guard('web')->login($user);
 
+        if ($request->hasSession()) {
+            $request->session()->regenerate();
+        }
+
         return response()->json([
-            'user' => new UserResource($data['user']),
-            'token' => $data['token'],
+            'user' => new UserResource($user),
         ]);
     }
 
-    public function me(Request $request)
+    public function me(Request $request): UserResource
     {
         return new UserResource(
-            $request->user()->loadMissing(['roles.permissions', 'permissions'])
+            $request->user()->loadMissing(['roles.permissions', 'permissions']),
         );
     }
 
-    public function logout(Request $request)
+    public function logout(Request $request): Response
     {
-        $request->user()->currentAccessToken()?->delete();
+        $token = $request->user()->currentAccessToken();
+
+        if ($token instanceof PersonalAccessToken) {
+            $token->delete();
+        }
+
         Auth::guard('web')->logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+
+        if ($request->hasSession()) {
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
 
         return response()->noContent();
     }
 
-    private function invalidCredentialsResponse()
+    private function invalidCredentialsResponse(): JsonResponse
     {
         return response()->json([
             'message' => 'Invalid credentials.',

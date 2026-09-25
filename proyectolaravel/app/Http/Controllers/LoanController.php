@@ -12,28 +12,31 @@ use App\Services\DeleteLoanService;
 use App\Services\ListLoansService;
 use App\Services\ReturnLoanService;
 use App\Services\UpdateLoanService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 
 class LoanController extends Controller
 {
     public function index(
         LoanIndexRequest $request,
-        ListLoansService $service
-    ) {
+        ListLoansService $service,
+    ): AnonymousResourceCollection {
         return LoanResource::collection(
-            $service->execute($request->validated())
+            $service->execute($request->validated()),
         );
     }
 
     public function store(
         StoreLoanRequest $request,
-        CreateLoanService $service
-    ) {
+        CreateLoanService $service,
+    ): JsonResponse {
         return (new LoanResource(
-            $service->execute($request->validated())
+            $service->execute($request->validated()),
         ))->response()->setStatusCode(201);
     }
 
-    public function show(Loan $loan)
+    public function show(Loan $loan): LoanResource
     {
         return new LoanResource($loan->load([
             'member',
@@ -45,17 +48,17 @@ class LoanController extends Controller
     public function update(
         UpdateLoanRequest $request,
         Loan $loan,
-        UpdateLoanService $service
-    ) {
+        UpdateLoanService $service,
+    ): LoanResource {
         return new LoanResource(
-            $service->execute($loan, $request->validated())
+            $service->execute($loan, $request->validated()),
         );
     }
 
     public function destroy(
         Loan $loan,
-        DeleteLoanService $service
-    ) {
+        DeleteLoanService $service,
+    ): Response {
         $service->execute($loan);
 
         return response()->noContent();
@@ -63,10 +66,10 @@ class LoanController extends Controller
 
     public function returnLoan(
         Loan $loan,
-        ReturnLoanService $service
-    ) {
+        ReturnLoanService $service,
+    ): LoanResource {
         return new LoanResource(
-            $service->execute($loan)
+            $service->execute($loan),
         );
     }
 }

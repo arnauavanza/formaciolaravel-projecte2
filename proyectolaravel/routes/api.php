@@ -10,8 +10,6 @@ use App\Http\Controllers\LoanController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\TicketPdfController;
-use Illuminate\Cookie\Middleware\EncryptCookies;
-use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', function () {
@@ -43,8 +41,6 @@ Route::post('loans/{loan}/return', [LoanController::class, 'returnLoan'])
 Route::apiResource('members', MemberController::class);
 
 Route::middleware([
-    EncryptCookies::class,
-    StartSession::class,
     'auth:sanctum',
     'active.user',
     'log.authenticated',
@@ -97,8 +93,6 @@ Route::middleware([
 });
 
 Route::middleware([
-    EncryptCookies::class,
-    StartSession::class,
     'throttle:6,1',
 ])->group(function () {
     Route::post('auth/register', [AuthController::class, 'register'])
