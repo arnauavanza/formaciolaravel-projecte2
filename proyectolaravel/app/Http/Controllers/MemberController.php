@@ -6,10 +6,13 @@ use App\Http\Requests\StoreMemberRequest;
 use App\Http\Requests\UpdateMemberRequest;
 use App\Http\Resources\MemberResource;
 use App\Models\Member;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 
 class MemberController extends Controller
 {
-    public function index()
+    public function index(): AnonymousResourceCollection
     {
         $members = Member::query()
             ->orderBy('name')
@@ -18,7 +21,7 @@ class MemberController extends Controller
         return MemberResource::collection($members);
     }
 
-    public function store(StoreMemberRequest $request)
+    public function store(StoreMemberRequest $request): JsonResponse
     {
         $member = Member::create($request->validated());
 
@@ -27,19 +30,21 @@ class MemberController extends Controller
             ->setStatusCode(201);
     }
 
-    public function show(Member $member)
+    public function show(Member $member): MemberResource
     {
         return new MemberResource($member);
     }
 
-    public function update(UpdateMemberRequest $request, Member $member)
-    {
+    public function update(
+        UpdateMemberRequest $request,
+        Member $member,
+    ): MemberResource {
         $member->update($request->validated());
 
         return new MemberResource($member->fresh());
     }
 
-    public function destroy(Member $member)
+    public function destroy(Member $member): JsonResponse|Response
     {
         if ($member->loans()->exists()) {
             return response()->json([
